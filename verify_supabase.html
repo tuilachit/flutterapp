@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+        }
+        .test-result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 5px; 
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .loading { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7; 
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 Supabase Connection Test</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="testConnection()">Test Connection</button>
+    <button onclick="testAuth()">Test Auth</button>
+    <button onclick="clearResults()">Clear</button>
+    
+    <div id="config">
+        <h3>Configuration:</h3>
+        <p><strong>URL:</strong> https://wujxyoohgfaldeoyasasn.supabase.co</p>
+        <p><strong>Key:</strong> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... (truncated)</p>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://wujxyoohgfaldeoyasasn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1anh5b29oZ2ZhbGRlb3lzYXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNTAzNDIsImV4cCI6MjA2NjkyNjM0Mn0.2AyHRLp73kENGOwLYF-iq4WvDwTb4QqC7bsiiIuaJ-s';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        function addResult(message, type = 'loading') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testConnection() {
+            addResult('🔄 Testing basic connection...', 'loading');
+            
+            try {
+                // Test 1: Basic fetch to health endpoint
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    addResult('✅ Basic connection successful!', 'success');
+                } else {
+                    addResult(`⚠️ Basic connection returned ${response.status}: ${response.statusText}`, 'error');
+                }
+                
+                // Test 2: Try to access users table
+                try {
+                    const { data, error, count } = await supabase
+                        .from('users')
+                        .select('*', { count: 'exact', head: true });
+                    
+                    if (error) {
+                        addResult(`⚠️ Users table error: ${error.message}`, 'error');
+                    } else {
+                        addResult(`✅ Users table accessible! Count: ${count}`, 'success');
+                    }
+                } catch (e) {
+                    addResult(`❌ Users table error: ${e.message}`, 'error');
+                }
+                
+                // Test 3: Try to access return_items table
+                try {
+                    const { data, error, count } = await supabase
+                        .from('return_items')
+                        .select('*', { count: 'exact', head: true });
+                    
+                    if (error) {
+                        addResult(`⚠️ Return items table error: ${error.message}`, 'error');
+                    } else {
+                        addResult(`✅ Return items table accessible! Count: ${count}`, 'success');
+                    }
+                } catch (e) {
+                    addResult(`❌ Return items table error: ${e.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAuth() {
+            addResult('🔄 Testing authentication...', 'loading');
+            
+            try {
+                // Test sign up with a test email
+                const testEmail = `test-${Date.now()}@example.com`;
+                const testPassword = 'testpassword123';
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: testEmail,
+                    password: testPassword,
+                });
+                
+                if (error) {
+                    addResult(`⚠️ Auth test error: ${error.message}`, 'error');
+                } else {
+                    addResult(`✅ Auth test successful! User: ${data.user?.email}`, 'success');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Auth test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-run basic connection test on load
+        window.addEventListener('load', () => {
+            setTimeout(testConnection, 1000);
+        });
+    </script>
+</body>
+</html> 
