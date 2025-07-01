@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
+import '../providers/auth_provider.dart';
 import 'enhanced_dashboard_page.dart';
 import 'connection_test_page.dart';
 
-class AuthPage extends StatefulWidget {
+class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
 
   @override
-  State<AuthPage> createState() => _AuthPageState();
+  ConsumerState<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthPageState extends State<AuthPage> {
+class _AuthPageState extends ConsumerState<AuthPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
@@ -22,8 +22,6 @@ class _AuthPageState extends State<AuthPage> {
   bool _isSignUp = false;
   String? _errorMessage;
 
-  final supabase = Supabase.instance.client;
-
   @override
   void initState() {
     super.initState();
@@ -31,14 +29,16 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   void _checkAuthState() {
-    final user = supabase.auth.currentUser;
-    if (user != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const EnhancedDashboardPage()),
-        );
-      });
-    }
+    final authState = ref.read(authStateProvider);
+    authState.whenData((state) {
+      if (state.session != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const EnhancedDashboardPage()),
+          );
+        });
+      }
+    });
   }
 
   Future<void> _signIn() async {
@@ -50,28 +50,18 @@ class _AuthPageState extends State<AuthPage> {
     });
 
     try {
-      print(
-          '🔗 Attempting to sign in with email: ${_emailController.text.trim()}');
-      print('🌐 Supabase URL: ${AppConstants.supabaseUrl}');
-
-      final response = await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
-      print('✅ Sign in response: ${response.user?.email}');
-
-      if (response.user != null && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const EnhancedDashboardPage()),
-        );
-      }
-    } catch (e) {
-      print('❌ Sign in error: $e');
-      setState(() {
-        if (e.toString().contains('Failed to fetch') ||
-            e.toString().contains('AuthRetryableFetchException')) {
-          _errorMessage = '''
+      result.fold(
+        (failure) {
+          setState(() {
+            if (failure.message.contains('Failed to fetch') ||
+                failure.message.contains('AuthRetryableFetchException')) {
+              _errorMessage = '''
 🔌 Connection Issue Detected!
 
 This usually means your Supabase database needs to be set up:
@@ -83,15 +73,28 @@ This usually means your Supabase database needs to be set up:
 
 Or try the connection test below.
 
-Technical error: $e''';
-        } else if (e.toString().contains('Invalid login credentials')) {
-          _errorMessage = 'Invalid email or password. Please try again.';
-        } else if (e.toString().contains('Email not confirmed')) {
-          _errorMessage =
-              'Please check your email and click the confirmation link.';
-        } else {
-          _errorMessage = 'Sign in failed: $e';
-        }
+Technical error: ${failure.message}''';
+            } else if (failure.message.contains('Invalid login credentials')) {
+              _errorMessage = 'Invalid email or password. Please try again.';
+            } else if (failure.message.contains('Email not confirmed')) {
+              _errorMessage =
+                  'Please check your email and click the confirmation link.';
+            } else {
+              _errorMessage = 'Sign in failed: ${failure.message}';
+            }
+          });
+        },
+        (user) {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const EnhancedDashboardPage()),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Unexpected error: $e';
       });
     } finally {
       setState(() {
@@ -109,64 +112,38 @@ Technical error: $e''';
     });
 
     try {
-      print(
-          '🔗 Attempting to sign up with email: ${_emailController.text.trim()}');
-
-      final response = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-        data: {'full_name': _nameController.text.trim()},
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.signUpWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        fullName: _nameController.text.trim(),
       );
 
-      if (response.user != null) {
-        setState(() {
-          _errorMessage = '✅ Success! Check your email for verification link.';
-        });
-      }
-    } catch (e) {
-      print('❌ Sign up error: $e');
-      setState(() {
-        if (e.toString().contains('Failed to fetch') ||
-            e.toString().contains('AuthRetryableFetchException')) {
-          _errorMessage = '''
+      result.fold(
+        (failure) {
+          setState(() {
+            if (failure.message.contains('Failed to fetch') ||
+                failure.message.contains('AuthRetryableFetchException')) {
+              _errorMessage = '''
 🔌 Connection Issue!
 
 Your Supabase database needs setup. Check the SQL schema file in your project and run it in your Supabase dashboard.
 
-Error: $e''';
-        } else {
-          _errorMessage = 'Sign up failed: $e';
-        }
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _testConnection() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Test basic connection
-      final response = await supabase.from('users').select('count').count();
-      setState(() {
-        _errorMessage = '✅ Connection successful! Database is working.';
-      });
+Error: ${failure.message}''';
+            } else {
+              _errorMessage = 'Sign up failed: ${failure.message}';
+            }
+          });
+        },
+        (user) {
+          setState(() {
+            _errorMessage = '✅ Success! Check your email for verification link.';
+          });
+        },
+      );
     } catch (e) {
       setState(() {
-        _errorMessage = '''
-❌ Connection test failed: $e
-
-Please:
-1. Check your internet connection
-2. Verify Supabase project URL
-3. Run the database schema setup
-4. Check Supabase dashboard for errors''';
+        _errorMessage = 'Unexpected error: $e';
       });
     } finally {
       setState(() {
