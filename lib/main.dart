@@ -1,33 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
-import 'core/constants/app_constants.dart';
+import 'core/config/supabase_config.dart';
 import 'presentation/pages/splash_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Initialize Supabase with enhanced configuration
-    await Supabase.initialize(
-      url: AppConstants.supabaseUrl,
-      anonKey: AppConstants.supabaseAnonKey,
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-      realtimeClientOptions: const RealtimeClientOptions(
-        logLevel: RealtimeLogLevel.info,
-      ),
-      storageOptions: const StorageClientOptions(
-        retryAttempts: 10,
-      ),
-    );
-
+    // Initialize Supabase
+    await SupabaseConfig.initialize();
     print('✅ Supabase initialized successfully');
-    print('🌐 URL: ${AppConstants.supabaseUrl}');
-    print('🔑 Key: ${AppConstants.supabaseAnonKey.substring(0, 20)}...');
   } catch (e) {
     print('❌ Supabase initialization failed: $e');
     // Continue anyway - we'll handle this in the app

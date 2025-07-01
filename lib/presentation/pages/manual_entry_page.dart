@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/return_item.dart';
+import '../providers/return_items_provider.dart';
 
-class ManualEntryPage extends StatefulWidget {
+class ManualEntryPage extends ConsumerStatefulWidget {
   const ManualEntryPage({super.key});
 
   @override
-  State<ManualEntryPage> createState() => _ManualEntryPageState();
+  ConsumerState<ManualEntryPage> createState() => _ManualEntryPageState();
 }
 
-class _ManualEntryPageState extends State<ManualEntryPage> {
+class _ManualEntryPageState extends ConsumerState<ManualEntryPage> {
   final _formKey = GlobalKey<FormState>();
   final _itemNameController = TextEditingController();
   final _brandController = TextEditingController();
@@ -23,7 +24,6 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
   final _orderNumberController = TextEditingController();
   final _notesController = TextEditingController();
 
-  final supabase = Supabase.instance.client;
   final uuid = const Uuid();
   bool _isLoading = false;
 
@@ -525,13 +525,6 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
       return;
     }
 
-    // Check if user is authenticated
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      _showErrorSnackBar('Please sign in to save items');
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
@@ -564,32 +557,19 @@ class _ManualEntryPageState extends State<ManualEntryPage> {
         notes: _notesController.text.isNotEmpty ? _notesController.text : null,
       );
 
-      // Save to Supabase
-      await supabase.from('return_items').insert({
-        'id': item.id,
-        'user_id': user.id,
-        'item_name': item.itemName,
-        'brand': item.brand,
-        'store': item.store,
-        'category': item.category,
-        'size': item.size,
-        'color': item.color,
-        'price': item.price,
-        'purchase_date': item.purchaseDate.toIso8601String(),
-        'return_deadline': item.returnDeadline.toIso8601String(),
-        'status': item.status.toString().split('.').last,
-        'condition': item.condition,
-        'is_online_purchase': item.isOnlinePurchase,
-        'receipt_number': item.receiptNumber,
-        'order_number': item.orderNumber,
-        'notes': item.notes,
-        'created_at': item.createdAt.toIso8601String(),
-        'updated_at': item.createdAt.toIso8601String(),
-      });
+      // Save using the service
+      final returnItemService = ref.read(returnItemServiceProvider);
+      final result = await returnItemService.createReturnItem(item);
 
-      // Show success and navigate back
-      _showSuccessSnackBar('Return item saved successfully!');
-      Navigator.pop(context, item);
+      result.fold(
+        (failure) {
+          _showErrorSnackBar('Error saving item: ${failure.message}');
+        },
+        (savedItem) {
+          _showSuccessSnackBar('Return item saved successfully!');
+          Navigator.pop(context, savedItem);
+        },
+      );
     } catch (e) {
       _showErrorSnackBar('Error saving item: $e');
     } finally {
