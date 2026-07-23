@@ -1,30 +1,30 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:return_clothing_tracker/main.dart';
+import 'package:return_clothing_tracker/core/utils/date_utils.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('AppDateUtils', () {
+    test('calculates a return deadline', () {
+      final purchaseDate = DateTime(2026, 7, 1);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(
+        AppDateUtils.calculateReturnDeadline(purchaseDate, 30),
+        DateTime(2026, 7, 31),
+      );
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('identifies dates on the same day', () {
+      expect(
+        AppDateUtils.isSameDay(
+          DateTime(2026, 7, 23, 9),
+          DateTime(2026, 7, 23, 18),
+        ),
+        isTrue,
+      );
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('returns month names', () {
+      expect(AppDateUtils.getMonthName(7), 'July');
+      expect(AppDateUtils.getAbbreviatedMonthName(7), 'Jul');
+    });
   });
 }
