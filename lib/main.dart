@@ -8,13 +8,12 @@ import 'presentation/pages/splash_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  String? configurationError;
   try {
-    // Initialize Supabase
     await SupabaseConfig.initialize();
-    print('✅ Supabase initialized successfully');
   } catch (e) {
-    print('❌ Supabase initialization failed: $e');
-    // Continue anyway - we'll handle this in the app
+    configurationError = e.toString();
+    debugPrint('Supabase initialization failed: $e');
   }
 
   // Set preferred orientations
@@ -33,7 +32,62 @@ void main() async {
     ),
   );
 
-  runApp(const ProviderScope(child: ReturnClothingTrackerApp()));
+  runApp(
+    ProviderScope(
+      child: configurationError == null
+          ? const ReturnClothingTrackerApp()
+          : ConfigurationErrorApp(message: configurationError),
+    ),
+  );
+}
+
+class ConfigurationErrorApp extends StatelessWidget {
+  const ConfigurationErrorApp({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'ReturnPal configuration',
+      theme: AppTheme.lightTheme,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.settings_outlined, size: 56),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Supabase configuration required',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Run the app with SUPABASE_URL and SUPABASE_ANON_KEY '
+                    'provided through --dart-define. See SETUP.md for the '
+                    'complete command.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ReturnClothingTrackerApp extends ConsumerWidget {
