@@ -4,9 +4,10 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // Supabase Configuration
-  static const String supabaseUrl = 'https://wujxyoohgfaldeoyasasn.supabase.co';
+  static const String supabaseUrl =
+      String.fromEnvironment('SUPABASE_URL');
   static const String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1anh5b29oZ2ZhbGRlb3lzYXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNTAzNDIsImV4cCI6MjA2NjkyNjM0Mn0.2AyHRLp73kENGOwLYF-iq4WvDwTb4QqC7bsiiIuaJ-s';
+      String.fromEnvironment('SUPABASE_ANON_KEY');
 
   // Storage Keys
   static const String userTokenKey = 'user_token';
