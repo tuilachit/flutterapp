@@ -234,7 +234,7 @@ class _ConnectionTestPageState extends ConsumerState<ConnectionTestPage> {
                   const SizedBox(height: 8),
                   Text('URL: ${AppConstants.supabaseUrl}'),
                   const SizedBox(height: 4),
-                  Text('Key: ${AppConstants.supabaseAnonKey.substring(0, 20)}...'),
+                  const Text('Public client key: configured'),
                 ],
               ),
             ),
