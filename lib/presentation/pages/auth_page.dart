@@ -66,10 +66,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
 This usually means your Supabase database needs to be set up:
 
-1. Go to: https://supabase.com/dashboard
-2. Open your project: wujxyoohgfaldeoyasasn
-3. Go to "SQL Editor"
-4. Run the setup script (check your project files)
+1. Confirm SUPABASE_URL and SUPABASE_ANON_KEY were passed with --dart-define
+2. Open your project at https://supabase.com/dashboard
+3. Review the SQL migrations and Row Level Security policies
 
 Or try the connection test below.
 
