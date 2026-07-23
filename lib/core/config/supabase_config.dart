@@ -5,6 +5,14 @@ class SupabaseConfig {
   static SupabaseClient get client => Supabase.instance.client;
   
   static Future<void> initialize() async {
+    if (AppConstants.supabaseUrl.isEmpty ||
+        AppConstants.supabaseAnonKey.isEmpty) {
+      throw StateError(
+        'Missing Supabase configuration. Pass SUPABASE_URL and '
+        'SUPABASE_ANON_KEY with --dart-define.',
+      );
+    }
+
     await Supabase.initialize(
       url: AppConstants.supabaseUrl,
       anonKey: AppConstants.supabaseAnonKey,
